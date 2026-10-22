@@ -1,5 +1,6 @@
 // Copyright (C) 2015 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 package org.qtproject.qt.android.speech;
 
@@ -9,10 +10,8 @@ import android.media.AudioFormat;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.speech.tts.TextToSpeech;
-import android.speech.tts.TextToSpeech.Engine;
 import android.speech.tts.TextToSpeech.OnInitListener;
 import android.speech.tts.UtteranceProgressListener;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import java.lang.Float;
@@ -74,7 +73,9 @@ class QtTextToSpeech
         }
 
         @Override
+        @SuppressWarnings("deprecation")
         public void onError(String utteranceId) {
+            // Needed for compilation even on 21+ (abstract)
             onError(utteranceId, TextToSpeech.ERROR);
         }
 
@@ -298,7 +299,7 @@ class QtTextToSpeech
     Locale getLocale()
     {
         //Log.d(TAG, "getLocale: " + mLocale);
-        final Locale language = mTts.getLanguage();
+        final Locale language = mTts.getVoice().getLocale();
         if (language == null)
             return null;
         String languageCode = language.getLanguage();

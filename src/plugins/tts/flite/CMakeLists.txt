@@ -1,7 +1,7 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 
-find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS Multimedia)
+find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS Concurrent MultimediaPrivate)
 
 qt_internal_add_plugin(QTextToSpeechFlitePlugin
     OUTPUT_NAME qtexttospeech_flite
@@ -12,12 +12,9 @@ qt_internal_add_plugin(QTextToSpeechFlitePlugin
         qtexttospeech_flite_processor.cpp qtexttospeech_flite_processor.h
     LIBRARIES
         Flite::Flite
+        Qt::Concurrent
         Qt::Core
         Qt::Multimedia
+        Qt::MultimediaPrivate
         Qt::TextToSpeech
-)
-
-qt_internal_extend_target(QTextToSpeechFlitePlugin CONDITION QT_FEATURE_flite_alsa
-    LIBRARIES
-        ALSA::ALSA
 )

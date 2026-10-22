@@ -1,6 +1,6 @@
 // Copyright (C) 2015 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-
+// Qt-Security score:significant reason:default
 
 #include "qtexttospeech_speechd.h"
 
@@ -292,7 +292,7 @@ bool QTextToSpeechEngineSpeechd::setVoice(const QVoice &voice)
         return false;
 
     const QByteArray moduleName = voiceData(voice).value<QByteArray>();
-    const int result = spd_set_output_module(speechDispatcher, moduleName);
+    const int result = spd_set_output_module(speechDispatcher, moduleName.data());
     if (result != 0) {
         setError(QTextToSpeech::ErrorReason::Configuration,
                  QCoreApplication::translate("QTextToSpeech",

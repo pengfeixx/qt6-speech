@@ -1,33 +1,35 @@
 Source: qt6-speech
 Section: libs
-Priority: optional
 Maintainer: Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>
 Uploaders: Patrick Franz <deltaone@debian.org>,
-Build-Depends: cmake (>= 3.24~),
-               debhelper-compat (= 13),
+Build-Depends: debhelper-compat (= 13),
+               dh-sequence-pkgkde-symbolshelper,
+               dh-sequence-qmldeps,
+               cmake (>= 3.24~),
                flite1-dev,
                libasound2-dev,
                libspeechd-dev,
                libxcb-xkb-dev,
                ninja-build,
-               pkg-config,
                pkg-kde-tools,
-               qt6-base-dev (>= 6.8.0+dfsg~),
-               qt6-base-private-dev (>= 6.8.0+dfsg~),
-               qt6-declarative-dev (>= 6.8.0+dfsg~),
-               qt6-multimedia-dev (>= 6.8.0~),
-Build-Depends-Indep: qt6-base-dev (>= 6.8~) <!nodoc>,
-                     qt6-documentation-tools (>= 6.8~) <!nodoc>,
-Standards-Version: 4.6.2
+               pkgconf,
+               qt6-base-dev (>= 6.11.2+dfsg~),
+               qt6-base-private-dev (>= 6.11.2+dfsg~),
+               qt6-declarative-dev (>= 6.11.2+dfsg~),
+               qt6-multimedia-dev (>= 6.11.2~),
+               qt6-multimedia-private-dev (>= 6.11.2~),
+Build-Depends-Indep: qt6-base-dev (>= 6.11~) <!nodoc>,
+                     qt6-documentation-tools (>= 6.11~) <!nodoc>,
+Standards-Version: 4.7.4
 Homepage: https://www.qt.io/developers/
 Vcs-Browser: https://salsa.debian.org/qt-kde-team/qt6/qt6-speech
 Vcs-Git: https://salsa.debian.org/qt-kde-team/qt6/qt6-speech.git
-Rules-Requires-Root: no
 
 Package: libqt6texttospeech6
 Architecture: any
 Multi-Arch: same
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
 Description: Qt 6 Speech library
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.
@@ -37,7 +39,8 @@ Description: Qt 6 Speech library
 Package: qt6-speech-flite-plugin
 Architecture: any
 Multi-Arch: same
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
 Pre-Depends: ${misc:Pre-Depends},
 Description: Qt 6 Speech library - Flite plugin
  Qt is a cross-platform C++ application framework. Qt's primary feature
@@ -51,7 +54,8 @@ Description: Qt 6 Speech library - Flite plugin
 Package: qt6-speech-speechd-plugin
 Architecture: any
 Multi-Arch: same
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
 Pre-Depends: ${misc:Pre-Depends},
 Description: Qt 6 Speech library - speechd plugin
  Qt is a cross-platform C++ application framework. Qt's primary feature
@@ -66,7 +70,10 @@ Package: qml6-module-qttexttospeech
 Architecture: any
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends},
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends},
+         ${qml6:Depends},
+         ${shlibs:Depends},
+Recommends: qt6-speech-speechd-plugin | qt6-speech-flite-plugin,
 Description: Qt 6 Speech QML module
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.
@@ -77,6 +84,7 @@ Package: qt6-speech-dev
 Architecture: any
 Multi-Arch: same
 Depends: libqt6texttospeech6 (= ${binary:Version}),
+         qml6-module-qttexttospeech (= ${binary:Version}),
          qt6-base-dev,
          qt6-multimedia-dev,
          ${misc:Depends},
@@ -88,10 +96,12 @@ Description: Qt 6 Speech library - development files
  applications using the Qt 6 Speech library.
 
 Package: qt6-speech-doc
+Build-Profiles: <!nodoc>
 Architecture: all
 Multi-Arch: foreign
 Section: doc
-Depends: qt6-base-doc, ${misc:Depends},
+Depends: qt6-base-doc,
+         ${misc:Depends},
 Description: Qt 6 Speech documentation
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.
@@ -99,10 +109,12 @@ Description: Qt 6 Speech documentation
  This package contains the documentation for Qt 6 Speech.
 
 Package: qt6-speech-doc-html
+Build-Profiles: <!nodoc>
 Architecture: all
 Multi-Arch: foreign
 Section: doc
-Depends: qt6-base-doc-html, ${misc:Depends},
+Depends: qt6-base-doc-html,
+         ${misc:Depends},
 Description: Qt 6 Speech HTML documentation
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.
@@ -113,7 +125,10 @@ Package: qt6-speech-examples
 Architecture: any
 Multi-Arch: same
 Section: misc
-Depends: ${misc:Depends}, ${shlibs:Depends},
+Depends: qt6-speech-speechd-plugin | qt6-speech-flite-plugin,
+         ${misc:Depends},
+         ${qml6:Depends},
+         ${shlibs:Depends},
 Description: Qt 6 Speech examples
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.

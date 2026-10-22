@@ -1,17 +1,16 @@
 // Copyright (C) 2015 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-
-
-
+// Qt-Security score:significant reason:default
 
 #ifndef QTEXTTOSPEECH_H
 #define QTEXTTOSPEECH_H
 
+#include <QtCore/qlocale.h>
+#include <QtCore/qobject.h>
+#include <QtCore/qmap.h>
+#include <QtCore/qshareddata.h>
 #include <QtTextToSpeech/qtexttospeech_global.h>
 #include <QtTextToSpeech/qvoice.h>
-#include <QtCore/qobject.h>
-#include <QtCore/qshareddata.h>
-#include <QtCore/qlocale.h>
 
 #include <QtCore/q20type_traits.h>
 

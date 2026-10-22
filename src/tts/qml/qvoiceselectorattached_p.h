@@ -1,5 +1,6 @@
 // Copyright (C) 2023 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QVOICESELECTORATTACHED_H
 #define QVOICESELECTORATTACHED_H
@@ -18,6 +19,8 @@
 #include <QtCore/qobject.h>
 #include <QtQml/qqml.h>
 #include <QtTextToSpeech/qvoice.h>
+
+#include <QtCore/qmap.h>
 
 QT_BEGIN_NAMESPACE
 

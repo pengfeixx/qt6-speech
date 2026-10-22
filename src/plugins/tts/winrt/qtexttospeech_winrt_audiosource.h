@@ -1,15 +1,18 @@
 // Copyright (C) 2022 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QTEXTTOSPEECHENGINE_WINRT_AUDIOSOURCE_H
 #define QTEXTTOSPEECHENGINE_WINRT_AUDIOSOURCE_H
 
 #include <QtCore/QIODevice>
+#include <QtCore/qspan.h>
 #include <QtMultimedia/QAudioFormat>
 
 #include <robuffer.h>
 #include <winrt/base.h>
 #include <QtCore/private/qfactorycacheregistration_p.h>
+#include <QtCore/private/qcomobject_p.h>
 #include <windows.foundation.h>
 #include <windows.media.speechsynthesis.h>
 #include <windows.storage.streams.h>
@@ -26,9 +29,7 @@ QT_BEGIN_NAMESPACE
 using StreamReadyHandler = IAsyncOperationCompletedHandler<SpeechSynthesisStream*>;
 using BytesReadyHandler = IAsyncOperationWithProgressCompletedHandler<IBuffer*, UINT32>;
 
-class AudioSource : public QIODevice,
-                    public StreamReadyHandler,
-                    public BytesReadyHandler
+class AudioSource final : public QIODevice, public QComObject<StreamReadyHandler, BytesReadyHandler>
 {
     Q_OBJECT
 public:
@@ -82,17 +83,6 @@ public:
         return boundaries;
     }
 
-    // IUnknown
-    ULONG STDMETHODCALLTYPE AddRef() { return ++ref; }
-    ULONG STDMETHODCALLTYPE Release() {
-        if (!--ref) {
-            delete this;
-            return 0;
-        }
-        return ref;
-    }
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, VOID **ppvInterface);
-
     // completion handler for synthesising the stream
     HRESULT STDMETHODCALLTYPE Invoke(IAsyncOperation<SpeechSynthesisStream*> *operation,
                                      AsyncStatus status) override;
@@ -109,7 +99,6 @@ private:
     // we don't destroy by accident, polymorphically, or via a QObject parent
     ~AudioSource() override;
 
-    qint64 bytesInBuffer() const;
     bool fetchMore();
 
     QAudioFormat audioFormat;
@@ -124,17 +113,15 @@ private:
     ComPtr<IBuffer> m_buffer;
     // access to the raw pcm bytes in the IBuffer; this took much reading of Windows header files...
     ComPtr<::Windows::Storage::Streams::IBufferByteAccess> bufferByteAccess;
-    // The data in the IBuffer might be paritally consumed
-    UINT32 m_bufferOffset = 0;
-    // RIFF header has been checked at the beginning of the stream
-    bool m_riffHeaderChecked = false;
+    // Span into the current IBuffer, shrunk as data is consumed
+    QSpan<const char> m_bufferSpan;
     quint64 m_bytesRead = 0;
     quint64 m_pauseRequestedAt = 0;
+    bool m_headerConsumed{};
+    std::optional<qint64> m_pauseDetectionSilenceCount;
 
     void populateBoundaries();
     QList<Boundary> boundaries;
-
-    ULONG ref = 1;
 };
 
 QT_END_NAMESPACE

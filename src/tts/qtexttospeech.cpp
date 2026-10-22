@@ -1,6 +1,6 @@
 // Copyright (C) 2015 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-
+// Qt-Security score:significant reason:default
 
 #include "qtexttospeech.h"
 #include "qtexttospeech_p.h"
@@ -264,7 +264,6 @@ void QTextToSpeechPrivate::disconnectSynthesizeFunctor()
     \dots
     \codeline
     \snippet quickspeech/Main.qml say0
-    \snippet quickspeech/Main.qml say1
     \snippet quickspeech/Main.qml pause
     \snippet quickspeech/Main.qml resume
     \dots
@@ -567,7 +566,7 @@ QTextToSpeech::Capabilities QTextToSpeech::engineCapabilities() const
     for (const auto capName : capNames) {
         const auto capString = capName.toString().toUtf8();
         bool ok = false;
-        const QTextToSpeech::Capability capFlag = QTextToSpeech::Capability(capEnum.keyToValue(capString, &ok));
+        const QTextToSpeech::Capability capFlag = QTextToSpeech::Capability(capEnum.keyToValue(capString.data(), &ok));
         if (!ok) {
             qWarning("Unknown capability: '%s' doesn't map to any QTextToSpeech::Capability value",
                      capString.constData());
@@ -734,7 +733,7 @@ QString QTextToSpeech::errorString() const
 }
 
 /*!
-    \qmlmethod TextToSpeech::say(string text)
+    \qmlmethod void TextToSpeech::say(string text)
 
     Starts synthesizing the \a text.
 
@@ -742,7 +741,6 @@ QString QTextToSpeech::errorString() const
     default audio output device.
 
     \snippet quickspeech/Main.qml say0
-    \snippet quickspeech/Main.qml say1
 
     \note All in-progress readings are stopped before beginning to read the recently
     synthesized text.
@@ -783,7 +781,7 @@ void QTextToSpeech::say(const QString &text)
 }
 
 /*!
-    \qmlmethod TextToSpeech::enqueue(string utterance)
+    \qmlmethod int TextToSpeech::enqueue(string utterance)
     \since 6.6
 
     Adds \a utterance to the queue of text to be spoken, and starts speaking.
@@ -935,7 +933,7 @@ void QTextToSpeech::synthesizeImpl(const QString &text,
 }
 
 /*!
-    \qmlmethod TextToSpeech::stop(BoundaryHint boundaryHint)
+    \qmlmethod void TextToSpeech::stop(BoundaryHint boundaryHint)
 
     Stops the current reading at \a boundaryHint, and clears the
     queue of pending texts.
@@ -968,7 +966,7 @@ void QTextToSpeech::stop(BoundaryHint boundaryHint)
 }
 
 /*!
-    \qmlmethod TextToSpeech::pause(BoundaryHint boundaryHint)
+    \qmlmethod void TextToSpeech::pause(BoundaryHint boundaryHint)
 
     Pauses the current speech at \a boundaryHint.
 
@@ -1004,7 +1002,7 @@ void QTextToSpeech::pause(BoundaryHint boundaryHint)
 }
 
 /*!
-    \qmlmethod TextToSpeech::resume()
+    \qmlmethod void TextToSpeech::resume()
 
     Resume speaking after \l pause() has been called.
 
@@ -1204,7 +1202,7 @@ QLocale QTextToSpeech::locale() const
 }
 
 /*!
-    \qmlmethod list<Voice> TextToSpeech::availableLocales()
+    \qmlmethod list<voice> TextToSpeech::availableLocales()
 
     Holds the list of locales that are supported by the active \l engine.
 */
@@ -1223,7 +1221,7 @@ QList<QLocale> QTextToSpeech::availableLocales() const
 }
 
 /*!
-    \qmlproperty Voice TextToSpeech::voice
+    \qmlproperty voice TextToSpeech::voice
 
     \brief This property holds the voice that will be used for the speech.
 
@@ -1274,7 +1272,7 @@ QVoice QTextToSpeech::voice() const
 }
 
 /*!
-    \qmlmethod list<Voice> TextToSpeech::availableVoices()
+    \qmlmethod list<voice> TextToSpeech::availableVoices()
 
     Holds the list of voices available for the current \l locale.
 */

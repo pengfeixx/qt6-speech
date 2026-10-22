@@ -1,16 +1,19 @@
 // Copyright (C) 2022 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #include "qtexttospeech_winrt.h"
 #include "qtexttospeech_winrt_audiosource.h"
 
-#include <QtMultimedia/QAudioSink>
-#include <QtMultimedia/QMediaDevices>
-#include <QtMultimedia/QAudioDevice>
+#include <QtMultimedia/qaudiodevice.h>
+#include <QtMultimedia/qaudiosink.h>
+#include <QtMultimedia/qmediadevices.h>
+#include <QtMultimedia/private/qaudiosystem_p.h>
 
 #include <QtCore/QBasicTimer>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QElapsedTimer>
+#include <QtCore/qset.h>
 #include <QtCore/private/qfunctions_winrt_p.h>
 
 #include <winrt/base.h>
@@ -271,9 +274,13 @@ QLocale QTextToSpeechEngineWinRT::locale() const
 
     ComPtr<IVoiceInformation> voiceInfo;
     HRESULT hr = d->synth->get_Voice(&voiceInfo);
+    if (FAILED(hr) || !voiceInfo)
+        return QLocale(QLocale::C, QLocale::AnyTerritory);
 
     HString language;
     hr = voiceInfo->get_Language(language.GetAddressOf());
+    if (FAILED(hr))
+        return QLocale(QLocale::C, QLocale::AnyTerritory);
 
     return QLocale(QString::fromWCharArray(language.GetRawBuffer(0)));
 }
@@ -334,6 +341,9 @@ bool QTextToSpeechEngineWinRT::setVoice(const QVoice &voice)
     d->forEachVoice([&data, &foundVoice](const ComPtr<IVoiceInformation> &voiceInfo) {
         HString voiceId;
         HRESULT hr = voiceInfo->get_Id(voiceId.GetAddressOf());
+        if (FAILED(hr))
+            return false;
+
         if (data == QString::fromWCharArray(voiceId.GetRawBuffer(0))) {
             foundVoice = voiceInfo;
             return true;
@@ -354,14 +364,14 @@ void QTextToSpeechEngineWinRT::timerEvent(QTimerEvent *e)
 {
     Q_D(QTextToSpeechEngineWinRT);
     if (e->timerId() == d->boundaryTimer.timerId()) {
-        const qint64 expected = d->currentBoundary->startTime;
         const qint64 elapsed = d->elapsedTimer.nsecsElapsed() / 1000 + d->playedTime;
         if (d->currentBoundary->type == AudioSource::Boundary::Word)
             emit sayingWord(d->currentBoundary->text, d->currentBoundary->beginIndex,
                             d->currentBoundary->endIndex - d->currentBoundary->beginIndex + 1);
         ++d->currentBoundary;
-        const qint64 msecsToNext = qMax((d->currentBoundary->startTime - elapsed) / 1000, 0);
+
         if (d->audioSource && d->currentBoundary != d->boundaries.constEnd()) {
+            const qint64 msecsToNext = qMax((d->currentBoundary->startTime - elapsed) / 1000, 0);
             d->boundaryTimer.start(msecsToNext, Qt::PreciseTimer, this);
         } else {
             d->boundaryTimer.stop();
@@ -402,6 +412,11 @@ void QTextToSpeechEngineWinRTPrivate::initializeAudioSink(const QAudioFormat &fo
     currentBoundary = boundaries.constBegin();
 
     audioSink.reset(new QAudioSink(audioDevice, format));
+    // LATER: use public API (compare QTBUG-138378)
+    QPlatformAudioSink *platformAudioSink = QPlatformAudioSink::get(*audioSink);
+    if (platformAudioSink)
+        platformAudioSink->setRole(QPlatformAudioSink::AudioEndpointRole::Accessibility);
+
     QObject::connect(audioSink.get(), &QAudioSink::stateChanged,
                      q, [this](QAudio::State sinkState) {
         sinkStateChanged(sinkState);

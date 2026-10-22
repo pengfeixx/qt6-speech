@@ -1,5 +1,7 @@
 // Copyright (C) 2021 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+// Qt-Security score:significant reason:default
+
 #include "qtexttospeech_android.h"
 
 #include <QtCore/qcoreapplication.h>
@@ -120,7 +122,7 @@ static void notifyEndSynthesis(JNIEnv *env, jobject thiz, jlong id)
 Q_DECLARE_JNI_NATIVE_METHOD(notifyEndSynthesis)
 
 
-Q_DECL_EXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void */*reserved*/)
+extern "C" Q_DECL_EXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void */*reserved*/)
 {
     static bool initialized = false;
     if (initialized)
@@ -310,7 +312,11 @@ void QTextToSpeechEngineAndroid::processNotifyRangeStart(int start, int end, int
 {
     Q_UNUSED(frame);
     const int length = end - start;
-    emit sayingWord(m_text.sliced(start, length), start,length);
+    if (start < 0 || length <= 0 || qsizetype(start) + length > m_text.size()) {
+        qDebug() << start << end << "are out of bounds of" << m_text;
+        return;
+    }
+    emit sayingWord(m_text.sliced(start, length), start, length);
 }
 
 void QTextToSpeechEngineAndroid::stop(QTextToSpeech::BoundaryHint boundaryHint)

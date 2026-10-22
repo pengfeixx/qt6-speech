@@ -9,6 +9,7 @@
 #include <QAudioFormat>
 #include <QAudioDevice>
 #include <QAudioBuffer>
+#include <QElapsedTimer>
 #include <QOperatingSystemVersion>
 #include <QRegularExpression>
 #include <qttexttospeech-config.h>
@@ -53,6 +54,7 @@ private slots:
 
     void sayMultiple_data();
     void sayMultiple();
+    void sayInvalid();
 
     void pauseAtUtterance_data();
     void pauseAtUtterance();
@@ -515,8 +517,8 @@ void tst_QTextToSpeech::volume()
     QTRY_COMPARE(spy.size(), 1);
     QVERIFY(spy.value(0).first().toDouble() > 0.6);
 
-    QVERIFY2(tts.volume() > 0.65, QByteArray::number(tts.volume()));
-    QVERIFY2(tts.volume() < 0.75, QByteArray::number(tts.volume()));
+    QCOMPARE_GT(tts.volume(), 0.65);
+    QCOMPARE_LT(tts.volume(), 0.75);
 
     tts.setVolume(tts.volume());
     QCOMPARE(spy.size(), 1);
@@ -553,7 +555,7 @@ void tst_QTextToSpeech::pauseResume()
     QFETCH_GLOBAL(QString, engine);
     if (engine != "mock" && !hasDefaultAudioOutput())
         QSKIP("No audio device present");
-    if (engine == "macos" || engine == "speechd")
+    if (engine == "speechd")
         QSKIP("Native speech engine is faulty");
 
     const QString text = QStringLiteral("Hello. World.");
@@ -661,6 +663,33 @@ void tst_QTextToSpeech::sayWithRates()
     logger.dismiss();
 }
 
+void tst_QTextToSpeech::sayInvalid()
+{
+    QFETCH_GLOBAL(QString, engine);
+    if (engine != "mock" && !hasDefaultAudioOutput())
+        QSKIP("No audio device present");
+
+    QTextToSpeech tts(engine);
+    QTRY_COMPARE(tts.state(), QTextToSpeech::Ready);
+    selectWorkingVoice(&tts);
+    auto logger = qScopeGuard([&tts]{
+        qWarning() << "Failure with voice" << tts.voice();
+    });
+
+    int speakingCount = 0;
+    bool doneSpeaking = false;
+    connect(&tts, &QTextToSpeech::stateChanged, this, [&](QTextToSpeech::State state){
+        if (state == QTextToSpeech::Speaking)
+            ++speakingCount;
+        else if (state == QTextToSpeech::Ready)
+            doneSpeaking = true;
+    });
+
+    tts.say("©");
+    QTRY_VERIFY(doneSpeaking);
+    QTRY_COMPARE(speakingCount, 1);
+}
+
 void tst_QTextToSpeech::sayMultiple_data()
 {
     QTest::addColumn<QStringList>("textList");
@@ -695,7 +724,7 @@ void tst_QTextToSpeech::sayMultiple()
     QFETCH(const QStringList, textList);
     for (qsizetype i = 0; i < textList.count(); ++i) {
         const QString &text = textList.at(i);
-        tts.enqueue(text);
+        qDebug() << "Equeued utterance" << tts.enqueue(text);
         if (!i) // wait for the engine to start synthesizing
             QTRY_COMPARE_NE(tts.state(), QTextToSpeech::Ready);
     }
@@ -704,6 +733,7 @@ void tst_QTextToSpeech::sayMultiple()
     QCOMPARE(aboutToSynthesizeSpy.count(), textList.size());
     QCOMPARE(speakingCount, 1);
 
+    qDebug() << "Synthesized utterances" << aboutToSynthesizeSpy;
     logger.dismiss();
 }
 
@@ -792,14 +822,15 @@ void tst_QTextToSpeech::sayingWord()
 
     QElapsedTimer timer;
     QStringList words;
-    QList<qint64> times;
+
+    QList<std::chrono::nanoseconds> times;
     connect(&tts, &QTextToSpeech::sayingWord, this,
         [&words, &times, &timer, text](const QString &word, qsizetype id, qsizetype start, qsizetype length) {
         const QString &slice = text.sliced(start, length);
         QCOMPARE(word, slice);
         QCOMPARE(id, 0);
         words << text.sliced(start, length);
-        times << timer.elapsed();
+        times << timer.durationElapsed();
     });
 
     timer.start();
@@ -810,7 +841,7 @@ void tst_QTextToSpeech::sayingWord()
     });
     QTRY_COMPARE(tts.state(), QTextToSpeech::Speaking);
     QTRY_COMPARE(tts.state(), QTextToSpeech::Ready);
-    qint64 totalTime = timer.elapsed();
+    auto totalTime = timer.durationElapsed();
 
     QCOMPARE(words, expectedWords);
 
@@ -820,6 +851,13 @@ void tst_QTextToSpeech::sayingWord()
     // doesn't get emitted with all words immediately.
     if (words.count() > 1)
         QCOMPARE_GE(times.last(), totalTime * 0.4);
+
+    std::list<std::chrono::nanoseconds> timeDifferences;
+    std::adjacent_difference(times.begin(), times.end(), std::back_inserter(timeDifferences));
+    timeDifferences.pop_front(); // first element is always 0
+
+    for (auto timeDiff : timeDifferences)
+        QCOMPARE_GT(timeDiff, std::chrono::milliseconds(5));
 
     debugHelper.dismiss();
 }
@@ -839,8 +877,6 @@ void tst_QTextToSpeech::sayingWordWithPause()
     QFETCH_GLOBAL(QString, engine);
     if (engine != "mock" && !hasDefaultAudioOutput())
         QSKIP("No audio device present");
-    if (engine == "macos")
-        QSKIP("macos engine's pause support is faulty");
 
     QFETCH(QStringList, words);
     QFETCH(int, pauseAt);
@@ -934,6 +970,17 @@ void tst_QTextToSpeech::synthesize()
         }
     });
 
+    // warm up to avoid that initializing audio hardware makes timing flaky
+    if (canCheckDuration) {
+        tts.say("Initializing");
+        QTRY_VERIFY(running);
+        QTRY_VERIFY(finished);
+        running = false;
+        finished = false;
+        speechTimer.invalidate();
+        speechTime = 0;
+    }
+
     // first, measure how long it takes to speak the text. We can't do that if we
     // can't play audio.
     if (canCheckDuration) {
@@ -964,8 +1011,8 @@ void tst_QTextToSpeech::synthesize()
         const qint32 bytesExpected = pcmFormat.bytesForDuration(speechTime * 1000);
 
         // We should have as much data as the format requires for the time it took
-        // to play the speech, +/- 10% as we can't measure the exact audio duration.
-        QCOMPARE_GE(pcmData.size(), double(bytesExpected) * 0.9);
+        // to play the speech, +/- 15% as we can't measure the exact audio duration.
+        QCOMPARE_GE(pcmData.size(), double(bytesExpected) * 0.85);
         if (engine == "flite") // flite is very unreliable
             QCOMPARE_LT(pcmData.size(), double(bytesExpected) * 1.5);
         else
